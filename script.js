@@ -170,26 +170,125 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Touch gestures for mobile/tablet
+// Enhanced touch gestures for mobile/tablet
 let touchStartX = 0;
 let touchEndX = 0;
+let touchStartY = 0;
+let touchEndY = 0;
 
 document.addEventListener('touchstart', e => {
     touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
 });
 
 document.addEventListener('touchend', e => {
     touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
     handleSwipe();
 });
 
 function handleSwipe() {
     const swipeThreshold = 50;
-    const diff = touchStartX - touchEndX;
+    const diffX = touchStartX - touchEndX;
+    const diffY = touchStartY - touchEndY;
     
-    // Close mobile menu on swipe left
-    if (diff > swipeThreshold && navMenu.classList.contains('active')) {
+    // Only handle horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Close mobile menu on swipe left
+        if (diffX > swipeThreshold && navMenu.classList.contains('active')) {
+            navMenu.classList.remove('active');
+            navToggle.classList.remove('active');
+        }
+        // Open mobile menu on swipe right (from left edge)
+        else if (diffX < -swipeThreshold && touchStartX < 50 && !navMenu.classList.contains('active')) {
+            navMenu.classList.add('active');
+            navToggle.classList.add('active');
+        }
+    }
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (navMenu.classList.contains('active') && 
+        !navMenu.contains(e.target) && 
+        !navToggle.contains(e.target)) {
         navMenu.classList.remove('active');
         navToggle.classList.remove('active');
     }
+});
+
+// Prevent body scroll when mobile menu is open
+function toggleBodyScroll(disable) {
+    if (disable) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+    } else {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+    }
+}
+
+// Update nav toggle to control body scroll
+const originalNavToggleHandler = navToggle.onclick;
+navToggle.addEventListener('click', () => {
+    setTimeout(() => {
+        toggleBodyScroll(navMenu.classList.contains('active'));
+    }, 10);
+});
+
+// Mobile-specific optimizations
+function isMobileDevice() {
+    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Optimize animations for mobile
+if (isMobileDevice()) {
+    // Reduce parallax effect on mobile
+    window.removeEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const hero = document.querySelector('.hero');
+        const rate = scrolled * -0.3;
+        
+        if (hero && window.innerWidth > 768) {
+            hero.style.transform = `translateY(${rate}px)`;
+        }
+    });
+    
+    // Simpler hover effects for touch devices
+    document.querySelectorAll('.project-card').forEach(card => {
+        card.addEventListener('touchstart', () => {
+            card.style.transform = 'translateY(-4px) scale(1.01)';
+        });
+        
+        card.addEventListener('touchend', () => {
+            card.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+}
+
+// Viewport height fix for mobile browsers
+function setMobileVH() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+setMobileVH();
+window.addEventListener('resize', setMobileVH);
+window.addEventListener('orientationchange', () => {
+    setTimeout(setMobileVH, 100);
+});
+
+// Improve form experience on mobile
+if (isMobileDevice()) {
+    const inputs = document.querySelectorAll('input, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            // Scroll to input on focus (iOS fix)
+            setTimeout(() => {
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        });
+    });
 }
